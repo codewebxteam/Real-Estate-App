@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
     View,
     Text,
@@ -48,10 +48,11 @@ const BrowseScreen = ({ navigation }: any) => {
         priceRange: [0, 100000000],
         bhk: '',
     });
+    const [activeFilters, setActiveFilters] = useState(0);
 
     useEffect(() => {
         loadData();
-    }, [listingType, location, filters]);
+    }, [listingType, location]);
 
     const loadData = async () => {
         setIsLoading(true);
@@ -60,7 +61,6 @@ const BrowseScreen = ({ navigation }: any) => {
                 getProperties({
                     listingType,
                     city: location.city === 'All Areas' ? undefined : location.city,
-                    propertyType: filters.propertyType || undefined,
                 }),
                 getFeaturedProperties(4),
             ]);
@@ -71,6 +71,39 @@ const BrowseScreen = ({ navigation }: any) => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const filteredProperties = useMemo(() => {
+        return properties.filter((prop) => {
+            // Property type filter
+            if (filters.propertyType && prop.propertyType !== filters.propertyType) {
+                return false;
+            }
+            // Price filter
+            if (prop.price > filters.priceRange[1]) {
+                return false;
+            }
+            // BHK filter
+            if (filters.bhk) {
+                const bhkValue = filters.bhk === '5+' ? 5 : parseInt(filters.bhk);
+                if (filters.bhk === '5+') {
+                    if (!prop.bhk || prop.bhk < bhkValue) return false;
+                } else {
+                    if (prop.bhk !== bhkValue) return false;
+                }
+            }
+            return true;
+        });
+    }, [properties, filters]);
+
+    const handleApplyFilters = (newFilters: any) => {
+        setFilters(newFilters);
+        // Count active filters
+        let count = 0;
+        if (newFilters.propertyType) count++;
+        if (newFilters.bhk) count++;
+        if (newFilters.priceRange[1] < 100000000) count++;
+        setActiveFilters(count);
     };
 
     const renderCategoryTab = (type: ListingType, label: string) => (
@@ -129,6 +162,11 @@ const BrowseScreen = ({ navigation }: any) => {
                                 onPress={() => setIsFilterModalVisible(true)}
                             >
                                 <MaterialCommunityIcons name="tune" size={24} color={Colors.primary} />
+                                {activeFilters > 0 && (
+                                    <View style={styles.filterBadge}>
+                                        <Text style={styles.filterBadgeText}>{activeFilters}</Text>
+                                    </View>
+                                )}
                             </Pressable>
                         </View>
                     </Animated.View>
@@ -184,13 +222,18 @@ const BrowseScreen = ({ navigation }: any) => {
                 {/* Property List */}
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Recently Added</Text>
+                    {activeFilters > 0 && (
+                        <Pressable onPress={() => handleApplyFilters({ propertyType: '', priceRange: [0, 100000000], bhk: '' })}>
+                            <Text style={styles.clearFilters}>Clear Filters</Text>
+                        </Pressable>
+                    )}
                 </View>
 
                 <View style={styles.propertyList}>
                     {isLoading ? (
                         <ActivityIndicator color={Colors.primary} style={{ margin: 40 }} />
-                    ) : properties.length > 0 ? (
-                        properties.map((item, index) => (
+                    ) : filteredProperties.length > 0 ? (
+                        filteredProperties.map((item, index) => (
                             <Animated.View
                                 key={item.id}
                                 entering={FadeInUp.delay(600 + (index * 100)).duration(600)}
@@ -204,11 +247,37 @@ const BrowseScreen = ({ navigation }: any) => {
                                         <Text style={styles.badgeText}>{item.propertyType.toUpperCase()}</Text>
                                     </View>
                                     <View style={styles.propertyInfo}>
-                                        <Text style={styles.propertyTitle}>{item.title}</Text>
-                                        <Text style={styles.propertyLoc}>{item.location.city}, {item.location.subCity}</Text>
+                                        <Text style={styles.propertyTitle} numberOfLines={2}>{item.title}</Text>
+                                        <Pressable 
+                                            style={styles.locationRow}
+                                            onPress={() => navigation.navigate('Map', { focusProperty: item })}
+                                        >
+                                            <MaterialCommunityIcons name="map-marker" size={16} color={Colors.primary} />
+                                            <Text style={styles.propertyLoc} numberOfLines={1}>
+                                                {item.location.subCity}, {item.location.city}
+                                            </Text>
+                                        </Pressable>
+                                        <View style={styles.detailsRow}>
+                                            {item.bhk && (
+                                                <View style={styles.detailChip}>
+                                                    <MaterialCommunityIcons name="bed" size={14} color={Colors.textSecondary} />
+                                                    <Text style={styles.detailText}>{item.bhk} BHK</Text>
+                                                </View>
+                                            )}
+                                            <View style={styles.detailChip}>
+                                                <MaterialCommunityIcons name="ruler-square" size={14} color={Colors.textSecondary} />
+                                                <Text style={styles.detailText}>{item.area} {item.areaUnit}</Text>
+                                            </View>
+                                        </View>
                                         <View style={styles.priceRow}>
                                             <Text style={styles.propertyPrice}>₹{item.price.toLocaleString()}</Text>
-                                            {item.bhk && <Text style={styles.propertyBhk}>{item.bhk} BHK</Text>}
+                                            <Pressable 
+                                                style={styles.viewMapBtn}
+                                                onPress={() => navigation.navigate('Map', { focusProperty: item })}
+                                            >
+                                                <MaterialCommunityIcons name="map-outline" size={16} color={Colors.primary} />
+                                                <Text style={styles.viewMapText}>View on Map</Text>
+                                            </Pressable>
                                         </View>
                                     </View>
                                 </AnimatedCard>
@@ -217,7 +286,17 @@ const BrowseScreen = ({ navigation }: any) => {
                     ) : (
                         <View style={styles.emptyContainer}>
                             <MaterialCommunityIcons name="home-search-outline" size={64} color={Colors.textMuted} />
-                            <Text style={styles.emptyText}>No properties found in this category.</Text>
+                            <Text style={styles.emptyText}>
+                                {activeFilters > 0 ? 'No properties match your filters' : 'No properties found in this category.'}
+                            </Text>
+                            {activeFilters > 0 && (
+                                <Pressable 
+                                    style={styles.clearBtn}
+                                    onPress={() => handleApplyFilters({ propertyType: '', priceRange: [0, 100000000], bhk: '' })}
+                                >
+                                    <Text style={styles.clearBtnText}>Clear Filters</Text>
+                                </Pressable>
+                            )}
                         </View>
                     )}
                 </View>
@@ -234,7 +313,7 @@ const BrowseScreen = ({ navigation }: any) => {
             <FilterModal
                 visible={isFilterModalVisible}
                 onClose={() => setIsFilterModalVisible(false)}
-                onApply={(newFilters) => setFilters(newFilters)}
+                onApply={handleApplyFilters}
                 currentFilters={filters}
             />
         </View>
@@ -271,6 +350,23 @@ const styles = StyleSheet.create({
         borderRadius: BorderRadius.md,
         alignItems: 'center',
         justifyContent: 'center',
+        position: 'relative',
+    },
+    filterBadge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        backgroundColor: Colors.error,
+        width: 18,
+        height: 18,
+        borderRadius: 9,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    filterBadgeText: {
+        fontSize: 10,
+        fontWeight: '800',
+        color: Colors.white,
     },
     searchIcon: { fontSize: 18, marginRight: 8 },
     searchInput: { flex: 1, fontSize: 15, color: Colors.textPrimary },
@@ -312,6 +408,7 @@ const styles = StyleSheet.create({
     },
     sectionTitle: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
     viewAll: { fontSize: 14, color: Colors.primary, fontWeight: '600' },
+    clearFilters: { fontSize: 14, color: Colors.error, fontWeight: '700' },
 
     featuredContainer: { paddingLeft: 20, paddingRight: 8 },
     featuredCard: {
@@ -354,20 +451,74 @@ const styles = StyleSheet.create({
         letterSpacing: 1,
     },
     propertyInfo: { padding: 16 },
-    propertyTitle: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
-    propertyLoc: { fontSize: 13, color: Colors.textMuted, marginTop: 4 },
+    propertyTitle: { fontSize: 17, fontWeight: '800', color: Colors.textPrimary, lineHeight: 24 },
+    locationRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 6,
+        gap: 4,
+    },
+    propertyLoc: { fontSize: 13, color: Colors.textMuted, fontWeight: '600', flex: 1 },
+    detailsRow: {
+        flexDirection: 'row',
+        gap: 10,
+        marginTop: 10,
+    },
+    detailChip: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.background,
+        paddingHorizontal: 10,
+        paddingVertical: 6,
+        borderRadius: 8,
+        gap: 4,
+    },
+    detailText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: Colors.textSecondary,
+    },
     priceRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
         marginTop: 12,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: Colors.borderLight,
     },
-    propertyPrice: { fontSize: 19, fontWeight: '900', color: Colors.primary },
+    propertyPrice: { fontSize: 20, fontWeight: '900', color: Colors.primary },
+    viewMapBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.background,
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 8,
+        gap: 4,
+    },
+    viewMapText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: Colors.primary,
+    },
     propertyBhk: { fontSize: 14, fontWeight: '700', color: Colors.textSecondary },
 
     emptyContainer: { alignItems: 'center', marginTop: 40, paddingBottom: 40 },
     emptyIcon: { fontSize: 48, marginBottom: 12 },
     emptyText: { color: Colors.textMuted, fontSize: 15, textAlign: 'center' },
+    clearBtn: {
+        marginTop: 20,
+        paddingHorizontal: 24,
+        paddingVertical: 12,
+        backgroundColor: Colors.primary,
+        borderRadius: BorderRadius.md,
+    },
+    clearBtnText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: Colors.white,
+    },
 });
 
 export default BrowseScreen;

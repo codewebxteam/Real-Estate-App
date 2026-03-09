@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -8,7 +8,6 @@ import {
     Pressable,
     Alert,
     StyleSheet,
-    Dimensions,
 } from 'react-native';
 import Animated, {
     FadeInDown,
@@ -21,30 +20,32 @@ import { GradientButton } from '../../components/ui/GradientButton';
 import { Colors, Shadows, BorderRadius } from '../../constants/colors';
 import { loginUser } from '../../services/authService';
 
-const { width } = Dimensions.get('window');
-
 const LoginScreen = ({ navigation }: any) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
 
-    const validate = () => {
-        const newErrors: typeof errors = {};
-        if (!email.trim()) newErrors.email = 'Email is required';
-        else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Enter a valid email';
-        if (!password.trim()) newErrors.password = 'Password is required';
-        else if (password.length < 6) newErrors.password = 'Min 6 characters';
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
+    const emailError = useMemo(() => {
+        if (!email) return undefined;
+        if (!/\S+@\S+\.\S+/.test(email)) return 'Enter a valid email';
+        return undefined;
+    }, [email]);
 
-    const handleLogin = async () => {
-        if (!validate()) return;
+    const passwordError = useMemo(() => {
+        if (!password) return undefined;
+        if (password.length < 6) return 'Min 6 characters';
+        return undefined;
+    }, [password]);
+
+    const isFormValid = useMemo(() => {
+        return email.trim() && password.trim() && !emailError && !passwordError;
+    }, [email, password, emailError, passwordError]);
+
+    const handleLogin = useCallback(async () => {
+        if (!isFormValid) return;
         setIsLoading(true);
         try {
             await loginUser(email.trim(), password);
-            // Navigation is handled by AuthContext
         } catch (error: any) {
             const message =
                 error.code === 'auth/user-not-found'
@@ -58,7 +59,7 @@ const LoginScreen = ({ navigation }: any) => {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [email, password, isFormValid]);
 
     return (
         <KeyboardAvoidingView
@@ -100,7 +101,7 @@ const LoginScreen = ({ navigation }: any) => {
                             placeholder="your@email.com"
                             keyboardType="email-address"
                             icon="email-outline"
-                            error={email && !/\S+@\S+\.\S+/.test(email) ? 'Enter a valid email' : undefined}
+                            error={emailError}
                         />
 
                         <InputField
@@ -110,6 +111,7 @@ const LoginScreen = ({ navigation }: any) => {
                             placeholder="Enter your password"
                             secureTextEntry
                             icon="lock-outline"
+                            error={passwordError}
                         />
 
                         <Pressable style={styles.forgotPassword}>
@@ -120,6 +122,7 @@ const LoginScreen = ({ navigation }: any) => {
                             title="Sign In"
                             onPress={handleLogin}
                             isLoading={isLoading}
+                            disabled={!isFormValid}
                             icon="🚀"
                             style={{ marginTop: 8 }}
                         />

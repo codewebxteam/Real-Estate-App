@@ -30,6 +30,7 @@ import PartnerDashboardScreen from '../screens/partner/PartnerDashboardScreen';
 import KYCOnboardingScreen from '../screens/partner/KYCOnboardingScreen';
 import MyListingsScreen from '../screens/partner/MyListingsScreen';
 import AddPropertyScreen from '../screens/partner/AddPropertyScreen';
+import PartnerProfileScreen from '../screens/partner/PartnerProfileScreen';
 
 // Admin screens
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
@@ -181,10 +182,10 @@ const PartnerTabs = () => (
     />
     <Tab.Screen
       name="PartnerProfile"
-      component={KYCOnboardingScreen}
+      component={PartnerProfileScreen}
       options={{
-        tabBarLabel: 'KYC',
-        tabBarIcon: ({ color, focused }) => <TabIcon icon="badge-account-horizontal" color={color} focused={focused} />,
+        tabBarLabel: 'Profile',
+        tabBarIcon: ({ color, focused }) => <TabIcon icon="account-circle" color={color} focused={focused} />,
       }}
     />
   </Tab.Navigator>

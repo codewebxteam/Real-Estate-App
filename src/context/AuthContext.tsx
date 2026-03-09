@@ -1,10 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-// firebase/auth import removed
-
-
-
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User } from '../types';
-import { onAuthChange, getUserProfile, logoutUser } from '../services/authService';
+// import { onAuthChange, getUserProfile, logoutUser } from '../services/authService';
 
 interface AuthContextType {
     firebaseUser: any | null;
@@ -31,34 +27,43 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-    // const [firebaseUser, setFirebaseUser] = useState<any | null>(null); 
-    // const [userProfile, setUserProfile] = useState<User | null>(null); 
-    // const [isLoading, setIsLoading] = useState(false); 
+   
+    // Options: 'customer' | 'partner' | 'admin'
+    const CURRENT_ROLE: 'customer' | 'partner' | 'admin' = 'customer'; 
+    // const CURRENT_ROLE: 'customer' | 'partner' | 'admin' = 'partner';   
+    // const CURRENT_ROLE: 'customer' | 'partner' | 'admin' = 'admin';   
 
-    const [firebaseUser, setFirebaseUser] = useState<any | null>({ uid: 'mock-user-123' });
-    const [userProfile, setUserProfile] = useState<User | null>({
+    const getUserName = () => {
+        if (CURRENT_ROLE === 'admin') return 'Admin User';
+        if (CURRENT_ROLE === 'partner') return 'John Doe (Partner)';
+        return 'Customer User';
+    };
+
+    const [firebaseUser] = useState<any | null>({ uid: 'mock-user-123' });
+    const [userProfile] = useState<User | null>({
         uid: 'mock-user-123',
-        name: 'John Doe',
-        email: 'john@example.com',
-        role: 'partner',
+        name: getUserName(),
+        email: `${CURRENT_ROLE}@example.com`,
+        role: CURRENT_ROLE,
         verified: true,
         kycStatus: 'verified',
         createdAt: new Date(),
     });
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading] = useState(false);
 
     useEffect(() => {
-        // Mock identity is persistent
-        console.log('Using Mock Auth Context');
+        console.log(' Current Role:', CURRENT_ROLE);
+        console.log(' Dashboard:', CURRENT_ROLE === 'customer' ? 'Customer Tabs' : CURRENT_ROLE === 'partner' ? 'Partner Tabs' : 'Admin Tabs');
     }, []);
 
-    const refreshProfile = async () => {
+    const refreshProfile = useCallback(async () => {
         // No-op for mock
-    };
+        console.log('Profile refreshed');
+    }, []);
 
-    const logout = async () => {
+    const logout = useCallback(async () => {
         console.log('Mock Logout - staying in mock session');
-    };
+    }, []);
 
     return (
         <AuthContext.Provider

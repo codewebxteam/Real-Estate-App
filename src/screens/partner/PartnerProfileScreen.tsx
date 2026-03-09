@@ -1,10 +1,10 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useAuth } from '../context/AuthContext';
-import { Colors, Shadows } from '../constants/colors';
+import { useAuth } from '../../context/AuthContext';
+import { Colors, Shadows } from '../../constants/colors';
 
-const ProfileScreen = () => {
+const PartnerProfileScreen = () => {
   const { userProfile, logout } = useAuth();
 
   const handleLogout = () => {
@@ -40,7 +40,7 @@ const ProfileScreen = () => {
         <Text style={styles.userName}>{userProfile?.name}</Text>
         <Text style={styles.userEmail}>{userProfile?.email}</Text>
         <View style={styles.roleBadge}>
-          <MaterialCommunityIcons name="account" size={16} color={Colors.primary} />
+          <MaterialCommunityIcons name="shield-star" size={16} color={Colors.primary} />
           <Text style={styles.roleText}>{userProfile?.role?.toUpperCase()}</Text>
         </View>
       </View>
@@ -60,9 +60,9 @@ const ProfileScreen = () => {
         <View style={styles.infoCard}>
           <MaterialCommunityIcons name="shield-check" size={20} color="#10B981" />
           <View style={styles.infoContent}>
-            <Text style={styles.infoLabel}>Account Status</Text>
+            <Text style={styles.infoLabel}>KYC Status</Text>
             <Text style={[styles.infoValue, { color: '#10B981' }]}>
-              {userProfile?.verified ? 'VERIFIED' : 'UNVERIFIED'}
+              {userProfile?.kycStatus?.toUpperCase()}
             </Text>
           </View>
         </View>
@@ -237,4 +237,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ProfileScreen;
+export default PartnerProfileScreen;

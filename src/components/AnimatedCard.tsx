@@ -1,12 +1,11 @@
 import React, { useEffect } from 'react';
-import { View, Image, Text, Pressable } from 'react-native';
+import { View, Image, Text, Pressable, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
   withDelay,
 } from 'react-native-reanimated';
-import { useWindowDimensions } from 'react-native';
 
 interface AnimatedCardProps {
   image: string;
@@ -25,12 +24,11 @@ export const AnimatedCard: React.FC<AnimatedCardProps> = ({
 }) => {
   const scale = useSharedValue(0.8);
   const opacity = useSharedValue(0);
-  const { width } = useWindowDimensions();
 
   useEffect(() => {
     scale.value = withDelay(delay, withSpring(1));
     opacity.value = withDelay(delay, withSpring(1));
-  }, []);
+  }, [delay]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -38,22 +36,54 @@ export const AnimatedCard: React.FC<AnimatedCardProps> = ({
   }));
 
   return (
-    <Animated.View style={[animatedStyle, { marginHorizontal: 8 }]}>
-      <Pressable
-        onPress={onPress}
-        className="bg-white rounded-lg overflow-hidden shadow-lg mb-4"
-        style={{ width: width * 0.9 }}
-      >
+    <Animated.View style={[styles.container, animatedStyle]}>
+      <Pressable onPress={onPress} style={styles.card}>
         <Image
           source={{ uri: image }}
-          className="w-full h-48 bg-gray-300"
+          style={styles.image}
           onError={() => console.log('Image failed to load')}
         />
-        <View className="p-4">
-          <Text className="text-lg font-bold text-gray-800">{title}</Text>
-          <Text className="text-primary text-xl font-bold mt-2">{price}</Text>
+        <View style={styles.content}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.price}>{price}</Text>
         </View>
       </Pressable>
     </Animated.View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    marginHorizontal: 8,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    marginBottom: 16,
+  },
+  image: {
+    width: '100%',
+    height: 192,
+    backgroundColor: '#E5E7EB',
+  },
+  content: {
+    padding: 16,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  price: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#4F46E5',
+    marginTop: 8,
+  },
+});

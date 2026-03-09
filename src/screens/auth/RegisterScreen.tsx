@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
     View,
     Text,
@@ -30,27 +30,50 @@ const RegisterScreen = ({ navigation }: any) => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [selectedRole, setSelectedRole] = useState<UserRole>('customer');
     const [isLoading, setIsLoading] = useState(false);
-    const [errors, setErrors] = useState<Record<string, string>>({});
 
-    const validate = () => {
-        const newErrors: Record<string, string> = {};
-        if (!name.trim()) newErrors.name = 'Name is required';
-        if (!email.trim()) newErrors.email = 'Email is required';
-        else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = 'Enter a valid email';
-        if (!password.trim()) newErrors.password = 'Password is required';
-        else if (password.length < 6) newErrors.password = 'Min 6 characters';
-        if (password !== confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
+    const nameError = useMemo(() => {
+        if (!name) return undefined;
+        if (name.trim().length < 2) return 'Name too short';
+        return undefined;
+    }, [name]);
 
-    const handleRegister = async () => {
-        if (!validate()) return;
+    const emailError = useMemo(() => {
+        if (!email) return undefined;
+        if (!/\S+@\S+\.\S+/.test(email)) return 'Enter a valid email';
+        return undefined;
+    }, [email]);
+
+    const passwordError = useMemo(() => {
+        if (!password) return undefined;
+        if (password.length < 6) return 'Min 6 characters';
+        return undefined;
+    }, [password]);
+
+    const confirmPasswordError = useMemo(() => {
+        if (!confirmPassword) return undefined;
+        if (password !== confirmPassword) return 'Passwords do not match';
+        return undefined;
+    }, [password, confirmPassword]);
+
+    const isFormValid = useMemo(() => {
+        return (
+            name.trim() &&
+            email.trim() &&
+            password.trim() &&
+            confirmPassword.trim() &&
+            !nameError &&
+            !emailError &&
+            !passwordError &&
+            !confirmPasswordError
+        );
+    }, [name, email, password, confirmPassword, nameError, emailError, passwordError, confirmPasswordError]);
+
+    const handleRegister = useCallback(async () => {
+        if (!isFormValid) return;
         setIsLoading(true);
         try {
             await registerUser(email.trim(), password, name.trim(), selectedRole);
             Alert.alert('Success! 🎉', 'Your account has been created successfully.');
-            // Navigation is handled by AuthContext
         } catch (error: any) {
             const message =
                 error.code === 'auth/email-already-in-use'
@@ -62,7 +85,7 @@ const RegisterScreen = ({ navigation }: any) => {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [email, password, name, selectedRole, isFormValid]);
 
     const roles: { key: UserRole; label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; desc: string }[] = [
         { key: 'customer', label: 'Customer', icon: 'account-search-outline', desc: 'Browse & buy properties' },
@@ -142,7 +165,7 @@ const RegisterScreen = ({ navigation }: any) => {
                             placeholder="Rahul Sharma"
                             autoCapitalize="words"
                             icon="account-outline"
-                            error={name === '' ? undefined : errors.name}
+                            error={nameError}
                         />
 
                         <InputField
@@ -152,7 +175,7 @@ const RegisterScreen = ({ navigation }: any) => {
                             placeholder="your@email.com"
                             keyboardType="email-address"
                             icon="email-outline"
-                            error={email === '' ? undefined : errors.email}
+                            error={emailError}
                         />
 
                         <InputField
@@ -171,7 +194,7 @@ const RegisterScreen = ({ navigation }: any) => {
                             placeholder="Min 6 characters"
                             secureTextEntry
                             icon="lock-outline"
-                            error={password === '' ? undefined : errors.password}
+                            error={passwordError}
                         />
 
                         <InputField
@@ -181,13 +204,14 @@ const RegisterScreen = ({ navigation }: any) => {
                             placeholder="Re-enter password"
                             secureTextEntry
                             icon="lock-check-outline"
-                            error={confirmPassword === '' ? undefined : errors.confirmPassword}
+                            error={confirmPasswordError}
                         />
 
                         <GradientButton
                             title="Create Account"
                             onPress={handleRegister}
                             isLoading={isLoading}
+                            disabled={!isFormValid}
                             icon="🚀"
                             style={{ marginTop: 12 }}
                         />
